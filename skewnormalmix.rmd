@@ -62,11 +62,12 @@ $$
 $$
 where $\alpha$ is a skewness parameter.
 
-Full condtionals are available for the proper parameter transformations and
+Full conditionals are available for the proper parameter transformations and
 Gibbs sampling is still feasible. See
-In Fr{\"u}wirth-Schnatter, Pyne (2010) for derivations and greater detail.
+'Bayesian inference for finite mixtures of univariate and multivariate skew-normal and skew-t distributions.'
+by Früwirth-Schnatter, Pyne (2010) for derivations and greater detail.
 
-```{r, echo = TRUE, cache=TRUE}
+```{r, echo = TRUE}
 ### Load packages
 library(tidyverse)
 load_all("SkewNormalMix")
@@ -125,6 +126,8 @@ alphas2 <- colMeans(res2$ALPHA[-burnin, ])
 etas2 <- colMeans(res2$ETA[-burnin, ])
 ```
 
+Check posterior fit:
+
 ```{r, echo=FALSE}
 lim <- range(xx, na.rm=TRUE)
 par(las=1, mfrow=c(1,1), mar=c(4, 4, 4, 4), bg="white")
@@ -136,9 +139,29 @@ y2 <- seq(min(xx), max(xx), len=5000)
 #mx <- max(post.dens)
 for(k in 1:K) lines(y2, etas2[k]*dsn(y2, mus2[k], omegas2[k], alphas2[k] ), col="gray40", lty=2, lwd=2)
 lines(y2, rowSums(sapply(1:K, function(x) etas2[x]*dsn(y2, mus2[x], omegas2[x], alphas2[x]))), col="skyblue3", lwd=2)
+```
 
-mu; mus
-omega; omegas
-alpha; alphas
-c(8/13, 5/13); etas
+Check truth:
+
+```{r, echo=FALSE}
+library(knitr)
+kable(tibble("Parameter" = c("mu1", "mu2", "omega1", "omega2",
+                           "alpha1", "alpha2", "eta1", "eta2"),
+           "Truth" = c(mu, omega, alpha, c(8/13, 5/13)),
+           "Estimate (R)" = round(c(mus, omegas, alphas, etas), 2),
+           "Estimate (Rcpp)" = round(c(mus2, omegas2, alphas2, etas2),2)),
+      digits=3)
+
+```
+
+## Benchmarking
+```{r, results="hide"}
+library(rbenchmark)
+res <- benchmark(skewNormalCpp(r=xx, K=2, nsim=200),
+          skewnormal.gibbs(xx, K=2, nsim=200, thin=1),
+          replications=3)
+```
+
+```{r, echo=FALSE}
+kable(res, digits=3)
 ```
