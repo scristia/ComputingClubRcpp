@@ -1,0 +1,12 @@
+\frametitle{Resources}
+\vspace{0.5em}
+    \begin{itemize}\itemsep1em
+        \item {\tt vignette("Rcpp-quickref")}
+        \item 'Seamless R and C++ integration with Rcpp' by Dirk Eddelbuettel.
+            Excellent book for learning Rcpp. Available for free through
+            JHU library.
+        \item Hadley Wickham's Rcpp tutorial:
+            http://adv-r.had.co.nz/Rcpp.html
+        \item A huge number of examples at http://gallery.rcpp.org
+        \item Stack exchange.
+    \end{itemize}

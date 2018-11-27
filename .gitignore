@@ -1,0 +1,5 @@
+skewnormalmix_cache/
+skewnormalmix_files/
+*.o
+*.so
+.Rhistory

@@ -1,0 +1,516 @@
+% this is based on the template found at:
+% https://github.com/yihui/knitr/blob/master/inst/examples/knitr-beamer.Rnw
+\documentclass{beamer}\usepackage[]{graphicx}\usepackage[]{color}
+%% maxwidth is the original width if it is less than linewidth
+%% otherwise use linewidth (to make sure the graphics do not exceed the margin)
+\makeatletter
+\def\maxwidth{ %
+  \ifdim\Gin@nat@width>\linewidth
+    \linewidth
+  \else
+    \Gin@nat@width
+  \fi
+}
+\makeatother
+
+\definecolor{fgcolor}{rgb}{0.345, 0.345, 0.345}
+\newcommand{\hlnum}[1]{\textcolor[rgb]{0.686,0.059,0.569}{#1}}%
+\newcommand{\hlstr}[1]{\textcolor[rgb]{0.192,0.494,0.8}{#1}}%
+\newcommand{\hlcom}[1]{\textcolor[rgb]{0.678,0.584,0.686}{\textit{#1}}}%
+\newcommand{\hlopt}[1]{\textcolor[rgb]{0,0,0}{#1}}%
+\newcommand{\hlstd}[1]{\textcolor[rgb]{0.345,0.345,0.345}{#1}}%
+\newcommand{\hlkwa}[1]{\textcolor[rgb]{0.161,0.373,0.58}{\textbf{#1}}}%
+\newcommand{\hlkwb}[1]{\textcolor[rgb]{0.69,0.353,0.396}{#1}}%
+\newcommand{\hlkwc}[1]{\textcolor[rgb]{0.333,0.667,0.333}{#1}}%
+\newcommand{\hlkwd}[1]{\textcolor[rgb]{0.737,0.353,0.396}{\textbf{#1}}}%
+\let\hlipl\hlkwb
+
+\usepackage{framed}
+\makeatletter
+\newenvironment{kframe}{%
+ \def\at@end@of@kframe{}%
+ \ifinner\ifhmode%
+  \def\at@end@of@kframe{\end{minipage}}%
+  \begin{minipage}{\columnwidth}%
+ \fi\fi%
+ \def\FrameCommand##1{\hskip\@totalleftmargin \hskip-\fboxsep
+ \colorbox{shadecolor}{##1}\hskip-\fboxsep
+     % There is no \\@totalrightmargin, so:
+     \hskip-\linewidth \hskip-\@totalleftmargin \hskip\columnwidth}%
+ \MakeFramed {\advance\hsize-\width
+   \@totalleftmargin\z@ \linewidth\hsize
+   \@setminipage}}%
+ {\par\unskip\endMakeFramed%
+ \at@end@of@kframe}
+\makeatother
+
+\definecolor{shadecolor}{rgb}{.97, .97, .97}
+\definecolor{messagecolor}{rgb}{0, 0, 0}
+\definecolor{warningcolor}{rgb}{1, 0, 1}
+\definecolor{errorcolor}{rgb}{1, 0, 0}
+\newenvironment{knitrout}{}{} % an empty environment to be redefined in TeX
+
+\usepackage{alltt}
+\usepackage{moreverb}
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+\begin{document}
+
+\title{Speeding up R with Rcpp}
+\author{Stephen Cristiano \\ Department of Biostatistics \\ Johns Hopkins University}
+
+\maketitle
+
+% very important to use option [fragile] for frames containing code output!
+
+\begin{frame}[fragile]{What is Rcpp?}
+    \vspace{0.5em}
+    \begin{itemize}\itemsep1em
+        \item Rcpp: Seamless integration between R and C++.
+        \item Extremely simple to connect C++ with R.
+        \item Maintained by Dirk Eddelbuetter and Romain Francois
+    \end{itemize}
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}[fragile]{Simple examples}
+\begin{knitrout}\footnotesize
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlkwd{library}\hlstd{(}\hlstr{'Rcpp'}\hlstd{)}
+\hlkwd{cppFunction}\hlstd{(}\hlstr{'int square(int x) \{ return x*x; \}'}\hlstd{)}
+\hlkwd{square}\hlstd{(}\hlnum{7L}\hlstd{)}
+\end{alltt}
+\begin{verbatim}
+## [1] 49
+\end{verbatim}
+\begin{alltt}
+\hlkwd{cppFunction}\hlstd{(}\hlstr{'
+            int add(int x, int y, int z) \{
+                int sum = x + y + z;
+                return sum;
+            \}'}
+            \hlstd{)}
+\hlkwd{add}\hlstd{(}\hlnum{1}\hlstd{,} \hlnum{2}\hlstd{,} \hlnum{3}\hlstd{)}
+\end{alltt}
+\begin{verbatim}
+## [1] 6
+\end{verbatim}
+\end{kframe}
+\end{knitrout}
+\end{frame}
+
+\begin{frame}[fragile]{Everything revolves around .Call}
+C++ Level:
+\begin{verbatimtab}
+SEXP foo(SEXP a, SEXP b, SEXP C, ...);
+\end{verbatimtab}
+R Level:
+\begin{knitrout}\footnotesize
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{res} \hlkwb{<-} \hlkwd{.Call}\hlstd{(}\hlstr{"foo"}\hlstd{, a, b, C, ...,} \hlkwc{package}\hlstd{=}\hlstr{"mypkg"}\hlstd{)}
+\end{alltt}
+\end{kframe}
+\end{knitrout}
+\end{frame}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}[fragile]{Why C++?}
+    \vspace{1em}
+    \begin{itemize}\itemsep1em
+        \item One of the most frequently used programming languages. Easy to
+            find help.
+        \item Speed.
+        \item Good chance what you want is already implemented in C++.
+        \item From wikipedia: `C++ is a statically typed, free-form, multi-paradigm, 
+            compiled, general-purpose, powerful programming language.'
+    \end{itemize}
+\end{frame}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}[fragile]{Why not C++?}
+    \vspace{1em}
+    \begin{itemize}\itemsep1em
+        \item More difficult to debug.
+        \item more difficult to modify.
+        \item The population of potentials users who understand both R and
+            C++ is smaller.
+    \end{itemize}
+\end{frame}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}[fragile]{Why Rcpp}
+    \vspace{1em}
+    \begin{itemize}\itemsep1em
+        \item Easy to use (honest).
+        \item Clean and approachable API that enable for high performance
+            code.
+        \item R style vectorized code at C++ level.
+        \item Programmer time vs computer time: much more efficient code that
+            does not take much longer to write.
+        \item Enables access to advanced data structures and algorithms
+            implented in C++ but not provided by R.
+        \item Handles garbage collection and the Rcpp programmer should never
+            have to worry about memory allocation and deallocation.
+    \end{itemize}
+\end{frame}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}[fragile]{C++ in 2 minutes}
+\begin{knitrout}\footnotesize
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlkwd{cppFunction}\hlstd{(}\hlstr{'
+  double sumC(NumericVector x) \{
+    int n = x.size();
+    double total = 0;
+    for(int i = 0; i < n; ++i) \{
+      total += x[i];
+    if(total > 100)
+    break;
+    \}
+    return total;
+  \}
+'}\hlstd{)}
+\hlkwd{sumC}\hlstd{(}\hlkwd{seq}\hlstd{(}\hlnum{1}\hlopt{:}\hlnum{10}\hlstd{))}
+\end{alltt}
+\end{kframe}
+\end{knitrout}
+\end{frame}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}[fragile]{}
+    \vspace{0.5em}
+    \begin{itemize}\itemsep1em
+        \item Need to initialize your variables with data type.
+        \item for loops of structure for(initialization; condition; increment).
+        \item conditionals are the same as R.
+        \item End every statement with a semicolon.
+        \item Vectors and arrays are 0-indexed.
+        \item size() is a member function on the vector class - x.size()
+            returns the size of x.
+        \item While C++ can be a very complex language, just knowing these
+            will enable you to write faster R functions.
+    \end{itemize}
+\end{frame}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}[fragile]{Typical bottlenecks in R}
+    \vspace{0.5em}
+    \begin{itemize}\itemsep1em
+        \item Loops that depend on previous iterations, eg MCMC methods.
+        \item Function calls in R slow, but very little overhead in C++.
+            Recursive functions are very inefficient in R.
+        \item Not having access to advanced data structures algorithms in R
+             but available in C++.
+    \end{itemize}
+\end{frame}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}[fragile]{When to use Rcpp}
+    \vspace{0.5em}
+    \begin{itemize}\itemsep1em
+        \item Sometimes the solution is to become a better R coder.
+        \item Before writing C++ code, you should first ask if it's necessary.
+        \item Take advantage of vectorization when possible.
+        \item Most base R functions already call C functions. Make sure there
+            isn't already an efficient implementation of what you are trying
+            to do.
+    \end{itemize}
+\end{frame}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}[fragile]{Data Structures}
+    \vspace{0.5em}
+    \begin{itemize}\itemsep1em
+        \item All R objects are internally represented by a SEXP: a pointer
+            to an S expression object.
+        \item Any R object can be passed down to C++ code: vectors, matrices
+            lists. Even functions and environments.
+        \item A large number of user-visible classes for R objects, which
+            contain pointers the the SEXP object.
+            \begin{itemize}
+                \item IntegerVector
+                \item NumericVector
+                \item LogicalVector
+                \item CharacterVector
+                \item NumericMatrix
+                \item S4
+                \item and many more
+            \end{itemize}
+    \end{itemize}
+\end{frame}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}[fragile]{Rcpp Sugar}
+    \vspace{0.5em}
+    \begin{itemize}\itemsep1em
+        \item Rcpp sugar brings a higher level of abstraction to C++ code
+            written in Rcpp.
+        \item Avoid C++ loops with code that strongly resembles R.
+        \item Takes advantage of operator overloading.
+        \item Despite the similar syntax, peformance is much faster in C++,
+            though not quite as fast as manually optimized C++ code.
+    \end{itemize}
+\end{frame}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}[fragile]{Example}
+\begin{knitrout}\footnotesize
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{pdistR} \hlkwb{<-} \hlkwa{function}\hlstd{(}\hlkwc{x}\hlstd{,} \hlkwc{ys}\hlstd{) \{}
+    \hlstd{(x} \hlopt{-} \hlstd{ys)}\hlopt{^}\hlnum{2}
+\hlstd{\}}
+
+\hlkwd{cppFunction}\hlstd{(}\hlstr{'NumericVector pdistC2(double x, NumericVector ys) \{
+            return pow((x-ys), 2);
+\}'}
+\hlstd{)}
+\hlkwd{pdistR}\hlstd{(}\hlnum{5.0}\hlstd{,} \hlkwd{c}\hlstd{(}\hlnum{4.1}\hlstd{,}\hlopt{-}\hlnum{9.3}\hlstd{,}\hlnum{0}\hlstd{,} \hlnum{13.7}\hlstd{))}
+\end{alltt}
+\begin{verbatim}
+## [1]   0.81 204.49  25.00  75.69
+\end{verbatim}
+\begin{alltt}
+\hlkwd{pdistC2}\hlstd{(}\hlnum{5.0}\hlstd{,} \hlkwd{c}\hlstd{(}\hlnum{4.1}\hlstd{,}\hlopt{-}\hlnum{9.3}\hlstd{,}\hlnum{0}\hlstd{,} \hlnum{13.7}\hlstd{))}
+\end{alltt}
+\begin{verbatim}
+## [1]   0.81 204.49  25.00  75.69
+\end{verbatim}
+\end{kframe}
+\end{knitrout}
+\end{frame}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}[fragile]{Logical Operators}
+    \begin{verbatimtab}
+    // two integer vectors of the same size
+    NumericVector x;
+    NumericVector y;
+
+    // expressions involving two vectors
+    LogicalVector res = x < y;
+    LogicalVector res = x != y;
+
+    // one vector, one single value
+    LogicalVector res = x < 2;
+
+    // two expressions
+    LogicalVector res = (x + y) == (x*x);
+
+    // functions producing single boolean result
+    all(x*x < 3);
+    any(x*x < 3);
+
+    \end{verbatimtab}
+\end{frame}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}[fragile]{Logical Operators}
+    There are many functions similar to what exists inside R
+    \begin{verbatimtab}
+    is_na(x);
+    seq_along(x);
+    sapply( seq_len(10), square<int>() );
+    ifelse( x < y, x, (x+y)*y );
+    pmin( x, x*x);
+    diff( xx );
+    intersect( xx, yy); //returns interserct of two vectors
+    unique( xx ); // subset of unique values in input vector
+
+    // math functions
+    abs(x); exp(x); log(x); ceil(x);
+    sqrt(x); sin(x); gamma(x);
+    range(x);
+    mean(x); sd(x); var(x);
+    which_min(x); which_max(x);
+    // A bunch more
+
+    \end{verbatimtab}
+\end{frame}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}[fragile]{Density and random number generation functions}
+    Rcpp has access to the same density, distribution, and RNG functions
+    used by R itself. For example, you can draw from a gamma distribution with
+    scale and shape parameters equal to 1 with:
+\begin{knitrout}\footnotesize
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlkwd{cppFunction}\hlstd{(}\hlstr{'NumericVector getRGamma() \{
+            RNGScope scope;
+            NumericVector x = rgamma( 10, 1, 1 );
+            return x;
+\}'}
+\hlstd{)}
+\hlkwd{getRGamma}\hlstd{()}
+\end{alltt}
+\begin{verbatim}
+##  [1] 0.6720068 0.3489705 0.3887167 2.1880637 0.4933245 1.8656011 2.3963768
+##  [8] 4.8920221 1.0502233 0.8761420
+\end{verbatim}
+\end{kframe}
+\end{knitrout}
+\end{frame}
+\begin{frame}[fragile]{RcppArmadillo}
+    \vspace{0.5em}
+    \begin{itemize}\itemsep1em
+        \item Armadillo is a high level and easy to use C++ linear algebra
+            library with syntax similar to Matlab.
+        \item RcppArmadillo is an Rcpp interface allowing access to the
+            Armadillo library.
+    \end{itemize}
+\end{frame}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}[fragile]{Be careful with pointers!}
+\begin{knitrout}\footnotesize
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlkwd{library}\hlstd{(inline,} \hlkwc{quietly}\hlstd{=}\hlnum{TRUE}\hlstd{)}
+\hlstd{src} \hlkwb{<-} \hlstr{'
+    Rcpp::NumericVector invec(vx);
+    Rcpp::NumericVector outvec(vx);
+    for(int i=0; i<invec.size(); i++) \{
+        outvec[i] = log(invec[i]);
+    \}
+    return outvec;
+'}
+\hlstd{fun} \hlkwb{<-} \hlkwd{cxxfunction}\hlstd{(}\hlkwd{signature}\hlstd{(}\hlkwc{vx}\hlstd{=}\hlstr{"numeric"}\hlstd{), src,} \hlkwc{plugin}\hlstd{=}\hlstr{"Rcpp"}\hlstd{)}
+\hlstd{x} \hlkwb{<-} \hlkwd{seq}\hlstd{(}\hlnum{1.0}\hlstd{,} \hlnum{3.0}\hlstd{,} \hlkwc{by}\hlstd{=}\hlnum{1}\hlstd{)}
+\hlkwd{cbind}\hlstd{(x,} \hlkwd{fun}\hlstd{(x))}
+\end{alltt}
+\begin{verbatim}
+##              x          
+## [1,] 0.0000000 0.0000000
+## [2,] 0.6931472 0.6931472
+## [3,] 1.0986123 1.0986123
+\end{verbatim}
+\end{kframe}
+\end{knitrout}
+Note: outvec and invec point to the same underlying R object.
+\end{frame}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}[fragile]{Use clone to not modify original vector.}
+\begin{knitrout}\footnotesize
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{src} \hlkwb{<-} \hlstr{'
+    Rcpp::NumericVector invec(vx);
+    Rcpp::NumericVector outvec = Rcpp::clone(vx);
+    for(int i=0; i<invec.size(); i++) \{
+        outvec[i] = log(invec[i]);
+    \}
+    return outvec;
+'}
+\hlstd{fun} \hlkwb{<-} \hlkwd{cxxfunction}\hlstd{(}\hlkwd{signature}\hlstd{(}\hlkwc{vx}\hlstd{=}\hlstr{"numeric"}\hlstd{), src,} \hlkwc{plugin}\hlstd{=}\hlstr{"Rcpp"}\hlstd{)}
+\hlstd{x} \hlkwb{<-} \hlkwd{seq}\hlstd{(}\hlnum{1.0}\hlstd{,} \hlnum{3.0}\hlstd{,} \hlkwc{by}\hlstd{=}\hlnum{1}\hlstd{)}
+\hlkwd{cbind}\hlstd{(x,} \hlkwd{fun}\hlstd{(x))}
+\end{alltt}
+\begin{verbatim}
+##      x          
+## [1,] 1 0.0000000
+## [2,] 2 0.6931472
+## [3,] 3 1.0986123
+\end{verbatim}
+\end{kframe}
+\end{knitrout}
+\end{frame}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}[fragile]{Creating R packages}
+    \vspace{0.5em}
+    Inspection of R source code for any R package will reveal the directories::
+    \begin{itemize}\itemsep1em
+        \item R: for R functions
+        \item vignettes: \LaTeX papers weaving R code and indicating the
+            intended workflow of an analysis.
+        \item man: documentation for exported R functions.
+        \item src: compiled code
+    \end{itemize}
+The file \verb|DESCRIPTION| provides a brief description of the project, a version
+number, and any packages for which your package depends.
+\end{frame}
+\begin{frame}[fragile]{Creating R packages}
+    \vspace{0.5em}
+    \begin{itemize}\itemsep1em
+        \item All compiled code coes in package/src directory.
+        \item Code in src/ will be automatically compiled and shared libraries
+            created when building the package.
+        \item Instantiate an Rcpp package: Rcpp.package.skeleton
+
+    \end{itemize}
+\end{frame}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}[fragile]{S4 objects with Rcpp}
+\begin{knitrout}\footnotesize
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{src} \hlkwb{<-} \hlstr{'
+S4 foo(x) ; foo.slot(".Data") = "bar" ; foo.slot("x")=100; return(foo);
+'}
+\hlstd{fun} \hlkwb{<-} \hlkwd{cxxfunction}\hlstd{(}\hlkwd{signature}\hlstd{(}\hlkwc{x}\hlstd{=}\hlstr{"any"}\hlstd{), src,}
+                   \hlkwc{plugin}\hlstd{=}\hlstr{"Rcpp"}\hlstd{)}
+\hlkwd{setClass}\hlstd{(} \hlstr{"S4ex"}\hlstd{,} \hlkwc{contains} \hlstd{=} \hlstr{"character"}\hlstd{,}
+         \hlkwd{representation}\hlstd{(} \hlkwc{x} \hlstd{=} \hlstr{"numeric"} \hlstd{) )}
+\hlstd{x} \hlkwb{<-} \hlkwd{new}\hlstd{(} \hlstr{"S4ex"}\hlstd{,} \hlstr{"bla"}\hlstd{,} \hlkwc{x} \hlstd{=} \hlnum{10} \hlstd{)}
+\hlkwd{fun}\hlstd{(x)}
+\end{alltt}
+\begin{verbatim}
+## An object of class "S4ex"
+## [1] "bar"
+## Slot "x":
+## [1] 100
+\end{verbatim}
+\begin{alltt}
+\hlkwd{str}\hlstd{(}\hlkwd{fun}\hlstd{(x))}
+\end{alltt}
+\begin{verbatim}
+## Formal class 'S4ex' [package ".GlobalEnv"] with 2 slots
+##   ..@ .Data: chr "bar"
+##   ..@ x    : int 100
+\end{verbatim}
+\end{kframe}
+\end{knitrout}
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}[fragile]{Case study}
+    \vspace{0.5em}
+Example: Gibbs sampler to find posterior distributions for parameters in
+mixture of Skew Normal distributions of the form:
+\begin{align}
+    \sum_{k=1}^{K} \pi_k f_{SN}(y; \xi_k, \omega_k^2, \alpha_k)
+\end{align}
+where
+\begin{align}
+    f_{SN}(y; \xi, \omega^2, \alpha) = \frac{2}{\omega} \phi\left( \frac{y - \xi}{\omega}\right) \Phi(\alpha \omega^{-1}(y - \xi))
+\end{align}
+See Fr{\"u}wirth-Schnatter, Pyne (2010) for details on how to derive the full conditionals.
+\par
+{\tt github.com/scristia/ComputingClubRcpp} for Rcpp implementation.
+\end{frame}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{frame}[fragile]{Resources}
+    \vspace{0.5em}
+    \begin{itemize}\itemsep1em
+        \item {\tt vignette("Rcpp-quickref")}
+        \item 'Seamless R and C++ integration with Rcpp' by Dirk Eddelbuettel.
+            Excellent book for learning Rcpp. Available for free through
+            JHU library.
+        \item Hadley Wickham's Rcpp tutorial:
+            http://adv-r.had.co.nz/Rcpp.html
+        \item A huge number of examples at http://gallery.rcpp.org
+        \item Stack exchange.
+    \end{itemize}
+\end{frame}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+\end{document}

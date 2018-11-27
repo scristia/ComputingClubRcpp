@@ -1,0 +1,14 @@
+Package: ComputingClubRcpp
+Type: Package
+Title: What the package does (short line)
+Version: 1.0
+Date: 2015-01-21
+Author: Stephen Cristiano
+Depends:
+    Rcpp (>= 0.11.1),
+    RcppArmadillo (>= 0.2.0)
+Imports: truncnorm
+Maintainer: Stephen Cristiano <stephen@jhmi.edu>
+Description: More about what it does (maybe more than one line)
+License: Artistic-2.0
+LinkingTo: Rcpp, RcppArmadillo
